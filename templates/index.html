@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="chart.js-4.5.0/package/dist/chart.js"></script>
+</head>
+<body>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f2f5;
+            margin:0;
+            padding:0;
+            min-height: 100vh;
+        }
+        header {
+            width: device-width;
+            height: 10vh;
+            background-color: #7ec9cc;
+            color: black;
+            display:flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        main{
+            flex:1;
+            display:flex;
+            flex-wrap: wrap;
+            flex-direction: row;
+            justify-content: space-around;
+        }
+        footer {
+            width: device-width;
+            height: 5vh;
+            background-color: #7ec9cc;
+            color: black;
+            margin-top: 30px;
+            display:flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .Foot{
+            display:flex;
+            flex-direction: row;
+            gap: 20px;
+        }
+        #filas-container {
+            margin-left:15px;
+            border-collapse: collapse;
+            width:100%;
+        }
+        #filas-container td, #filas-container th{
+            border: 1px solid black;
+            padding: 8px;
+        }
+        #filas-container tr:nth-child(even){
+            background-color: #c1dbdc;
+        }
+        #filas-container th{
+            padding-top: 12px;
+            padding-bottom: 12px;
+            text-align: left;
+            background-color: #69ccca;
+            color: black;
+        }
+        .fila{
+            background-color: white;
+            transition: transform 0.5s ease;
+        }
+
+        .fila:hover {
+            background-color: #b0cfb0;
+            color: black;
+        }
+        .Tabla{
+            display:flex;
+            justify-content: center;
+            width: 45%;
+        }
+        .Grafico{
+            display:flex;
+            flex-direction: column;
+            justify-content: center;
+            width:45%;
+            margin-right: 15px;
+            margin-top: 10px;
+            margin-left: 15px;
+        }
+            @media (max-width: 576px) {
+            main {
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+            }
+
+            .Tabla, .Grafico {
+                width: 95%;
+            }
+        }
+        @media (min-width:577px) and (max-width: 1500px) {
+            main {
+                justify-content: center;
+                align-items: center;
+                flex-direction: column; 
+            }
+
+            .Tabla, .Grafico {
+                width: 90%;
+            }
+        }
+        @media (min-width:1501px) {
+
+            .Tabla, .Grafico {
+                width: 45%;
+            }
+        }
+    </style>    
+
+    <header>
+        <div> 
+            <h1>Últimas mediciones del sensor</h1>
+        </div>
+    </header>
+    <main>
+        <div class="Tabla">
+            <table id="filas-container"></table>
+        </div>
+        
+        <div class="Grafico">
+            <div><canvas id="myChart"></canvas></div>
+            
+            <div id="Datos-importantes"></div>
+        </div>
+
+        <script>
+            async function cargarDatos() {
+                const res = await fetch('/api/datos');
+                const datos = await res.json();
+
+                const container = document.getElementById("filas-container");
+                container.innerHTML = `<tr>
+                <th>Fecha</th>
+                <th>Temperatura</th>
+                <th>Humedad</th>
+                <th>Potenciometro 1</th>
+                <th>Potenciometro 2</th>
+                <th>LDR</th>
+            </tr>`;
+
+                datos.forEach(item => {
+                    const card = document.createElement("tr");
+                    card.className = "fila";
+                    card.innerHTML = `
+                        <td>${item.Fecha_Actual}</td>
+                        <td>${item.Temperatura} °C </td>
+                        <td>${item.Humedad_Rela} % </td>
+                        <td>${item.Potenciometro1} </td>
+                        <td>${item.Potenciometro2} </td>
+                        <td>${item.Ldr}</td>
+                    `;
+                    container.appendChild(card)
+                });
+                
+            }
+            cargarDatos();
+            setInterval(cargarDatos, 5000); //Actualiza cada 5 segundos
+           
+            async function datosImportantes() {
+                const res = await fetch('/api/datos-importantes');
+                const datosimp = await res.json();
+
+                const Temperatura = datosimp[0];
+                const Humedad_Rela = datosimp[1];
+                const Ldr = datosimp[2];
+
+                const container = document.getElementById("Datos-importantes");
+                container.innerHTML = `
+                <h4>Datos importantes</h4>
+                <div class="datoimportante">
+                    <p>Temperatura más alta registrada: ${Temperatura} °C </p>
+                    <p>Promedio de humedad: ${Humedad_Rela}</p>
+                    <p>Lectura de LDR más alta: ${Ldr}</p>
+                </div>
+                `;
+                
+            }
+            datosImportantes();
+            setInterval(datosImportantes, 5000);
+
+                // Datos iniciales
+                const data = {
+                labels: ['Temperatura', 'Humedad_Rela', 'Potenciometro1', 'Potenciometro2', 'LDR'],
+                datasets: [{
+                    label: 'Último registro del sensor',
+                    data: [0, 0, 0, 0, 0],
+                    backgroundColor: 'rgba(197,226,196,255)',
+                    borderColor: 'rgba(168,233,209,255)',
+                    borderWidth: 1
+                }]
+                };
+
+                // Configuración del gráfico
+                const config = {
+                type: 'bar',
+                data: data,
+                options: {
+                    scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                    }
+                }
+                };
+
+                // Crear el gráfico
+                const ctx = document.getElementById('myChart').getContext('2d');
+                const myChart = new Chart(ctx, config);
+
+                // Función para actualizar los datos
+                async function actualizarDatos() {
+                    try {
+                        const res = await fetch('/api/registro');
+                        const registro = await res.json();
+                        if (registro.length > 0) {
+                            const item = registro[0]; 
+                            const nuevosDatos = [
+                                item.Temperatura,
+                                item.Humedad_Rela,
+                                item.Potenciometro1,
+                                item.Potenciometro2,
+                                item.Ldr
+                            ];
+                            myChart.data.datasets[0].data = nuevosDatos;
+                            myChart.update();
+                        }
+                    } catch (error) {
+                        console.error('Error al actualizar datos:', error);
+                    }
+                }
+                actualizarDatos();
+                // Actualizar cada 5 segundos
+                setInterval(actualizarDatos, 5000);
+        </script>
+    </main>
+    <footer>
+        <div class="Foot">
+            <h4>Hecho por: Juan Sebastián Rivera Mosquera </h4>
+            <h6>ADSO 2924273</h6>
+        </div>
+    </footer>
+</body>
+
+</html>
